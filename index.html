@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>古建筑测绘游戏 - 核心原型</title>
+<style>
+    body {
+        font-family: "Microsoft YaHei", sans-serif;
+        background-color: #f4ece2; /* 大地色系背景 */
+        color: #3e332a;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+    }
+    #game-container {
+        width: 100%;
+        max-width: 800px;
+        background-color: #fffaf0;
+        border: 2px solid #8b7355;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    #header {
+        background-color: #8b7355;
+        color: #fff;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #5e4c36;
+    }
+    .resource-item {
+        font-size: 14px;
+        margin-left: 15px;
+        font-weight: bold;
+    }
+    #scene-content {
+        padding: 30px;
+        min-height: 400px;
+    }
+    h2 {
+        border-bottom: 1px dashed #8b7355;
+        padding-bottom: 10px;
+    }
+    .action-btn {
+        background-color: #a0522d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 10px 10px 10px 0;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.2s;
+    }
+    .action-btn:hover {
+        background-color: #8b4513;
+    }
+    .action-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+    .nav-btn {
+        background-color: #556b2f;
+    }
+    .nav-btn:hover {
+        background-color: #483d8b;
+    }
+    .log-box {
+        margin-top: 30px;
+        padding: 15px;
+        background-color: #eee9e0;
+        border: 1px solid #d3c4b1;
+        height: 120px;
+        overflow-y: auto;
+        font-size: 14px;
+    }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="header">
+        <div><strong>当前场景: <span id="scene-name">实验室</span></strong></div>
+        <div>
+            <span class="resource-item">⏳ 时间(天): <span id="res-time">1</span></span>
+            <span class="resource-item">🧧 红纸: <span id="res-red">500</span></span>
+            <span class="resource-item">📘 蓝纸: <span id="res-blue">10</span></span>
+            <span class="resource-item">💰 黄金: <span id="res-gold">0</span></span>
+            <span class="resource-item">🔬 科研点: <span id="res-pts">0</span></span>
+        </div>
+    </div>
+    
+    <div id="scene-content">
+        </div>
+    
+    <div class="log-box" id="log-box">
+        <div>欢迎来到古建筑测绘游戏原型。目前你正在实验室。</div>
+    </div>
+</div>
+
+<script>
+    // 游戏状态管理
+    const state = {
+        scene: 'lab', // 'lab', 'map', 'intermediate', 'task'
+        resources: {
+            time: 1,
+            red: 500,
+            blue: 10,
+            gold: 0,
+            pts: 0
+        },
+        currentLocation: '' // 记录当前所在的地图节点
+    };
+
+    // 日志系统
+    function log(message) {
+        const logBox = document.getElementById('log-box');
+        logBox.innerHTML = `<div>> ${message}</div>` + logBox.innerHTML;
+    }
+
+    // 资源更新系统
+    function updateResources(costTime = 0, costRed = 0, costBlue = 0, gainRed = 0, gainPts = 0) {
+        if (state.resources.red < costRed || state.resources.blue < costBlue) {
+            log("资源不足，操作失败！");
+            return false;
+        }
+        state.resources.time += costTime;
+        state.resources.red = state.resources.red - costRed + gainRed;
+        state.resources.blue -= costBlue;
+        state.resources.pts += gainPts;
+        
+        document.getElementById('res-time').innerText = state.resources.time;
+        document.getElementById('res-red').innerText = state.resources.red;
+        document.getElementById('res-blue').innerText = state.resources.blue;
+        document.getElementById('res-pts').innerText = state.resources.pts;
+        return true;
+    }
+
+    // 场景切换
+    function changeScene(sceneName, locationName = '') {
+        state.scene = sceneName;
+        if (locationName) state.currentLocation = locationName;
+        renderScene();
+    }
+
+    // 渲染具体场景内容
+    function renderScene() {
+        const contentDiv = document.getElementById('scene-content');
+        const sceneNameSpan = document.getElementById('scene-name');
+
+        if (state.scene === 'lab') {
+            sceneNameSpan.innerText = "大学实验室";
+            contentDiv.innerHTML = `
+                <h2>🔬 实验室 (大本营)</h2>
+                <p>这里是你处理内业、管理人员和升级装备的地方。</p>
+                <button class="action-btn" onclick="doResearch()">整理内业数据 (耗时2天, +10科研点)</button>
+                <button class="action-btn" onclick="buyEquipment()">购买显微镜设备 (-10蓝纸)</button>
+                <hr style="border:0; border-top:1px dashed #ccc; margin: 20px 0;">
+                <button class="action-btn nav-btn" onclick="changeScene('map')">🗺️ 打开世界地图，准备外业</button>
+            `;
+        } 
+        else if (state.scene === 'map') {
+            sceneNameSpan.innerText = "世界地图";
+            contentDiv.innerHTML = `
+                <h2>🗺️ 区域地图机动</h2>
+                <p>选择你要前往的测绘目标。机动需要消耗时间和路费(红纸)。</p>
+                <button class="action-btn" onclick="travelTo('东南亚废墟', 3, 150)">前往东南亚废墟 (耗时3天, -150红纸)</button>
+                <button class="action-btn" onclick="travelTo('江南古寺', 1, 50)">前往江南古寺 (耗时1天, -50红纸)</button>
+                <hr style="border:0; border-top:1px dashed #ccc; margin: 20px 0;">
+                <button class="action-btn nav-btn" onclick="changeScene('lab')">🏠 返回实验室</button>
+            `;
+        }
+        else if (state.scene === 'intermediate') {
+            sceneNameSpan.innerText = "中间场景：" + state.currentLocation;
+            contentDiv.innerHTML = `
+                <h2>🚶 村镇驻地 (${state.currentLocation})</h2>
+                <p>你已抵达目标附近的村落。这里可以进行最后的补给或触发本地村民的支线任务。</p>
+                <button class="action-btn" onclick="buyConsumables()">购买干粮和红牛 (-20红纸)</button>
+                <button class="action-btn" onclick="talkToNPC()">与村长交谈 (收集情报)</button>
+                <hr style="border:0; border-top:1px dashed #ccc; margin: 20px 0;">
+                <button class="action-btn nav-btn" onclick="changeScene('task')">⚔️ 进入【${state.currentLocation}】任务场景开始测绘</button>
+                <button class="action-btn nav-btn" onclick="changeScene('map')">🗺️ 离开此地，返回地图</button>
+            `;
+        }
+        else if (state.scene === 'task') {
+            sceneNameSpan.innerText = "外业任务：" + state.currentLocation;
+            contentDiv.innerHTML = `
+                <h2>📐 测绘任务场景</h2>
+                <p>建筑模型已变为半透明网格状。请选择你的测绘方式。</p>
+                <button class="action-btn" onclick="performSurvey('手绘草图', 5, 0, 300, 20)">纸笔卷尺测绘 (耗时最长:5天, +300红纸, +20科研点)</button>
+                <button class="action-btn" onclick="performSurvey('无人机摄影', 1, 0, 300, 50)" disabled>无人机摄影测量 (需先购买设备, 耗时短)</button>
+                <hr style="border:0; border-top:1px dashed #ccc; margin: 20px 0;">
+                <button class="action-btn nav-btn" onclick="changeScene('intermediate')">🔙 撤回驻地村镇</button>
+            `;
+        }
+    }
+
+    // --- 互动逻辑函数 ---
+    function doResearch() {
+        if(updateResources(2, 0, 0, 0, 10)) log("你在实验室爆肝了两天处理数据，获得了 10 科研点。");
+    }
+
+    function buyEquipment() {
+        if(updateResources(0, 0, 10, 0, 0)) log("花费了 10 蓝纸，实验室设备已升级！你可以接取更高级的任务了。");
+    }
+
+    function travelTo(locationName, costTime, costRed) {
+        if(updateResources(costTime, costRed, 0, 0, 0)) {
+            log(`经过长途跋涉，你抵达了 ${locationName} 附近的驻点。`);
+            changeScene('intermediate', locationName);
+        }
+    }
+
+    function buyConsumables() {
+        if(updateResources(0, 20, 0, 0, 0)) log("你购买了干粮和饮用水，为外业做好了准备。");
+    }
+
+    function talkToNPC() {
+        log("村长告诉你：这片遗迹经常有野猪出没，测绘时要小心你的仪器被拱了...");
+    }
+
+    function performSurvey(methodName, costTime, costRed, gainRed, gainPts) {
+        if(updateResources(costTime, costRed, 0, gainRed, gainPts)) {
+            log(`你使用了【${methodName}】完成了当前区块的测绘工作！`);
+            log(`老板对你的成果很满意，发了项目回款 ${gainRed} 红纸，你获得了 ${gainPts} 科研点数。`);
+        }
+    }
+
+    // 初始化渲染
+    renderScene();
+</script>
+</body>
+</html>
